@@ -71,9 +71,9 @@ jobs:
         id: version
         run: |
           if [[ $GITHUB_EVENT_NAME == 'pull_request' ]]; then
-            VERSION=0.${{ github.run_number }}.0-beta
+            VERSION=0.1.${{ github.run_number }}-beta
           else
-            VERSION=1.${{ github.run_number }}.0
+            VERSION=1.0.${{ github.run_number }}
           fi
           echo "::set-output name=version::$VERSION"
 
