@@ -91,7 +91,7 @@ jobs:
       # Add step to zip binaries
       - name: Zip Binaries
         run: |
-          zip -r go_tasks_${{ runner.os }}.zip ./binaries
+          zip -r go_tasks.zip ./binaries
 
       # Modify Upload Release Assets to upload the zip file
       - name: Upload Release Assets
@@ -100,7 +100,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./go_tasks_${{ runner.os }}.zip
-          asset_name: go_tasks_${{ runner.os }}.zip
+          asset_path: ./go_tasks.zip
+          asset_name: go_tasks.zip
           asset_content_type: application/zip
 
