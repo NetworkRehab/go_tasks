@@ -31,7 +31,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libgl1-mesa-dev libxcursor-dev
+          sudo apt-get install -y pkg-config libgl1-mesa-dev libxcursor-dev libxrandr-dev
 
       - name: Build (Unix)
         if: matrix.os != 'windows-latest'
