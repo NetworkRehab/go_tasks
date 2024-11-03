@@ -78,6 +78,7 @@ jobs:
           echo "::set-output name=version::$VERSION"
 
       - name: Create Release
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -96,3 +97,4 @@ jobs:
           asset_path: ./binaries
           asset_name: go_tasks_${{ runner.os }}.zip
           asset_content_type: application/zip
+
