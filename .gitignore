@@ -23,3 +23,22 @@ go.work.sum
 
 # env file
 .env
+
+# Database files
+task_tracker.db
+# SQLite WAL and SHM files
+task_tracker.db-wal
+task_tracker.db-shm
+
+# IDE and editor directories
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

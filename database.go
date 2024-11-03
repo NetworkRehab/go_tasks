@@ -1,56 +1,71 @@
 package main
 
 import (
-	"database/sql"
-	"log"
-
-	_ "github.com/mattn/go-sqlite3" // SQLite driver.
+    "context"
+    "database/sql"
+    "time"
+    _ "github.com/mattn/go-sqlite3"
 )
 
-// Database represents the SQLite database connection.
 type Database struct {
-	Conn *sql.DB // Database connection object.
+    Conn *sql.DB
 }
 
-// NewDatabase initializes a new database connection.
-func NewDatabase() *Database {
-	// Open a connection to the SQLite database file.
-	db, err := sql.Open("sqlite3", "./task_tracker.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-	return &Database{Conn: db}
+func NewDatabase() (*Database, error) {
+    // Remove os.Remove to prevent data loss on restart
+    db, err := sql.Open("sqlite3", "./task_tracker.db?_timeout=5000&_journal_mode=WAL")
+    if err != nil {
+        return nil, err
+    }
+
+    // Test the connection
+    if err := db.Ping(); err != nil {
+        db.Close()
+        return nil, err
+    }
+
+    // Set connection pool settings
+    db.SetMaxOpenConns(10)
+    db.SetMaxIdleConns(5)
+    db.SetConnMaxLifetime(time.Hour)
+
+    return &Database{Conn: db}, nil
 }
 
-// Initialize creates the necessary tables if they don't exist.
-func (db *Database) Initialize() {
-	// Create the tasks table to store task details.
-	createTasksTable := `
+func (db *Database) Close() error {
+    return db.Conn.Close()
+}
+
+func (db *Database) Initialize(ctx context.Context) error {
+    // Create tables within transaction
+    tx, err := db.Conn.BeginTx(ctx, nil)
+    if (err != nil) {
+        return err
+    }
+    defer tx.Rollback()
+
+    // Create tasks table
+    if _, err := tx.ExecContext(ctx, `
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            score INTEGER NOT NULL,
-            created_at DATETIME NOT NULL,
-            updated_at DATETIME NOT NULL
-        );
-    `
-	_, err := db.Conn.Exec(createTasksTable)
-	if err != nil {
-		log.Fatal(err)
-	}
+            points INTEGER NOT NULL,
+            created_at DATETIME NOT NULL
+        );`); err != nil {
+        return err
+    }
 
-	// Create the task_completions table to log task completions.
-	createCompletionsTable := `
-        CREATE TABLE IF NOT EXISTS task_completions (
+    // Create completions table
+    if _, err := tx.ExecContext(ctx, `
+        CREATE TABLE IF NOT EXISTS completions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             task_id INTEGER NOT NULL,
             completed_at DATETIME NOT NULL,
-            score INTEGER NOT NULL,
+            points INTEGER NOT NULL,
             FOREIGN KEY(task_id) REFERENCES tasks(id)
-        );
-    `
-	_, err = db.Conn.Exec(createCompletionsTable)
-	if err != nil {
-		log.Fatal(err)
-	}
+        );`); err != nil {
+        return err
+    }
+
+    return tx.Commit()
 }

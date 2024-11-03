@@ -1,0 +1,82 @@
+name: Build and Release
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Build
+        run: |
+          GOOS=${{ matrix.os == 'windows-latest' && 'windows' || matrix.os == 'darwin' && 'darwin' || 'linux' }}
+          GOARCH=amd64
+          OUTPUT_NAME=go_tasks_${GOOS}_${GOARCH}
+          if [ "$GOOS" = "windows" ]; then OUTPUT_NAME+='.exe'; fi
+          go build -o $OUTPUT_NAME .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.sha }}
+          path: ./go_tasks_*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.sha }}
+          path: ./binaries
+
+      - name: Determine Version
+        id: version
+        run: |
+          if [[ $GITHUB_EVENT_NAME == 'pull_request' ]]; then
+            VERSION=0.${{ github.run_number }}.0-beta
+          else
+            VERSION=1.${{ github.run_number }}.0
+          fi
+          echo "::set-output name=version::$VERSION"
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ github.event_name == 'pull_request' }}
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./binaries
+          asset_name: go_tasks_${{ runner.os }}.zip
+          asset_content_type: application/zip
