@@ -31,14 +31,24 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libgl1-mesa-dev
+          sudo apt-get install -y pkg-config libgl1-mesa-dev libxcursor-dev
 
-      - name: Build
+      - name: Build (Unix)
+        if: matrix.os != 'windows-latest'
         run: |
-          GOOS=${{ matrix.os == 'windows-latest' && 'windows' || matrix.os == 'darwin' && 'darwin' || 'linux' }}
+          GOOS=${{ matrix.os == 'macos-latest' && 'darwin' || 'linux' }}
           GOARCH=amd64
           OUTPUT_NAME=go_tasks_${GOOS}_${GOARCH}
           if [ "$GOOS" = "windows" ]; then OUTPUT_NAME+='.exe'; fi
+          go build -o $OUTPUT_NAME .
+
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $GOOS = 'windows'
+          $GOARCH = 'amd64'
+          $OUTPUT_NAME = "go_tasks_${GOOS}_${GOARCH}.exe"
           go build -o $OUTPUT_NAME .
 
       - name: Upload Artifact
