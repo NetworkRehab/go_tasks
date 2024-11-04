@@ -25,10 +25,7 @@ go.work.sum
 .env
 
 # Database files
-task_tracker.db
-# SQLite WAL and SHM files
-task_tracker.db-wal
-task_tracker.db-shm
+*.db
 
 # IDE and editor directories
 .vscode/
@@ -38,8 +35,6 @@ task_tracker.db-shm
 
 # OS-specific files
 .DS_Store
-Thumbs.db
 
 # Logs
 *.log
-task_tracker.db
