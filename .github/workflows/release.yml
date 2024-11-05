@@ -33,15 +33,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pkg-config libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxxf86vm-dev
 
-      - name: Build
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:GOOS="windows"
+          $env:GOARCH="amd64"
+          $env:OUTPUT_NAME="go_tasks_${env:GOOS}_${env:GOARCH}.exe"
+          go build -o "$env:OUTPUT_NAME"
+
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
         run: |
           GOOS=$(go env GOOS)
           GOARCH=$(go env GOARCH)
           OUTPUT_NAME=go_tasks_${GOOS}_${GOARCH}
-          if [ "$GOOS" = "windows" ]; then OUTPUT_NAME+='.exe'; fi
-          go build -o $OUTPUT_NAME .
+          go build -o $OUTPUT_NAME
 
-      - name: Upload Artifact
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}
