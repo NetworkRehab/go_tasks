@@ -12,12 +12,7 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-      fail-fast: false
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -27,40 +22,28 @@ jobs:
         with:
           go-version: '1.23.2'
 
-      - name: Install Dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y pkg-config libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxxf86vm-dev
+          go install github.com/fyne-io/fyne-cross@latest
 
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $env:GOOS = "windows"
-          $env:GOARCH = "amd64"
-          $env:OUTPUT_NAME = "go_tasks_windows_amd64.exe"
-          go build -o "$env:OUTPUT_NAME"
+      - name: Build for Windows
+        run: fyne-cross windows -arch=amd64
 
-      - name: Build (macOS)
-        if: runner.os == 'macOS'
-        env:
-          CGO_ENABLED: 1
-        run: |
-          brew install pkg-config
-          brew install glfw
-          GOOS=darwin GOARCH=amd64 CGO_CFLAGS="-I$(brew --prefix)/include -I$(brew --prefix glfw)/include" CGO_LDFLAGS="-L$(brew --prefix)/lib -L$(brew --prefix glfw)/lib" go build -o go_tasks_darwin_amd64
+      - name: Build for macOS
+        run: fyne-cross darwin -arch=amd64
 
-      - name: Build (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          GOOS=linux GOARCH=amd64 go build -o go_tasks_linux_amd64
+      - name: Build for Linux
+        run: fyne-cross linux -arch=amd64
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: go_tasks_${{ matrix.os }}
-          path: go_tasks_*
+          name: go_tasks_builds
+          path: |
+            fyne-cross/dist/*/
+            !fyne-cross/dist/*/deps/
 
   release:
     needs: build
