@@ -4,51 +4,72 @@ package main
 
 import (
 	"context"
+	"os"
 	"testing"
+	"time"
+	"database/sql"
 )
+
+const testDBPath = "test_task_tracker.db"
+
+func setupTestDB(t *testing.T) (*Database, context.Context, func()) {
+	// Remove any existing test database
+	os.Remove(testDBPath)
+
+	db, err := sql.Open("sqlite3", testDBPath+"?_timeout=5000&_journal_mode=WAL")
+	if err != nil {
+		t.Fatalf("Failed to open test database: %v", err)
+	}
+
+	database := &Database{Conn: db}
+	ctx := context.Background()
+	
+	if err := database.Initialize(ctx); err != nil {
+		t.Fatalf("Failed to initialize test database: %v", err)
+	}
+
+	cleanup := func() {
+		db.Close()
+		os.Remove(testDBPath)
+	}
+
+	return database, ctx, cleanup
+}
 
 // TestAddTask tests the AddTask function.
 func TestAddTask(t *testing.T) {
-	db, err := NewDatabase()
-	if err != nil {
-		t.Fatalf("Failed to create database: %v", err)
-	}
-	defer db.Close()
-
-	ctx := context.Background()
-	if err := db.Initialize(ctx); err != nil {
-		t.Fatalf("Failed to initialize database: %v", err)
-	}
+	db, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	tests := []struct {
 		name        string
 		taskName    string
 		points      *int
-		shouldError bool
+		wantErr     bool
 	}{
 		{
-			name:        "Valid task with points",
-			taskName:    "Test Task",
-			points:      intPtr(10),
-			shouldError: false,
+			name:     "Valid task with points",
+			taskName: "Test Task",
+			points:   intPtr(10),
+			wantErr:  false,
 		},
 		{
-			name:        "Valid task without points",
-			taskName:    "No Points Task",
-			points:      nil,
-			shouldError: false,
+			name:     "Valid task without points",
+			taskName: "No Points Task",
+			points:   nil,
+			wantErr:  false,
 		},
 		{
-			name:        "Empty name",
-			taskName:    "",
-			points:      intPtr(5),
-			shouldError: true,
+			name:     "Empty name",
+			taskName: "",
+			points:   intPtr(5),
+			wantErr:  true,
 		},
 		{
-			name:        "Negative points",
-			taskName:    "Negative Points",
-			points:      intPtr(-1),
-			shouldError: true,
+			name:     "Negative points",
+			taskName: "Negative Points",
+			points:   intPtr(-1),
+			wantErr:  true,
 		},
 	}
 
@@ -56,7 +77,7 @@ func TestAddTask(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			task, err := AddTask(ctx, db, tt.taskName, tt.points)
 			
-			if tt.shouldError {
+			if tt.wantErr {
 				if err == nil {
 					t.Error("Expected error, got nil")
 				}
@@ -67,8 +88,9 @@ func TestAddTask(t *testing.T) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
+			// Verify task was created correctly
 			if task.Name != tt.taskName {
-				t.Errorf("Expected task name %s, got %s", tt.taskName, task.Name)
+				t.Errorf("Expected task name %q, got %q", tt.taskName, task.Name)
 			}
 
 			expectedPoints := 0
@@ -77,29 +99,20 @@ func TestAddTask(t *testing.T) {
 			}
 
 			if task.Points != expectedPoints {
-				t.Errorf("Expected task points %d, got %d", expectedPoints, task.Points)
+				t.Errorf("Expected points %d, got %d", expectedPoints, task.Points)
+			}
+
+			if task.CreatedAt.IsZero() {
+				t.Error("Expected CreatedAt to be set")
 			}
 		})
 	}
 }
 
-// Helper function to create integer pointer
-func intPtr(i int) *int {
-	return &i
-}
-
-// TestTaskCompletion ensures that completing a task adds a record
+// TestTaskCompletion tests the task completion functionality
 func TestTaskCompletion(t *testing.T) {
-	db, err := NewDatabase()
-	if err != nil {
-		t.Fatalf("Failed to create database: %v", err)
-	}
-	defer db.Close()
-	
-	ctx := context.Background()
-	if err := db.Initialize(ctx); err != nil {
-		t.Fatalf("Failed to initialize database: %v", err)
-	}
+	db, ctx, cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Test with both nil and non-nil points
 	tests := []struct {
@@ -118,46 +131,47 @@ func TestTaskCompletion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Add a sample task
-			task, err := AddTask(ctx, db, "Completion Test", tt.points)
-			if err != nil {
-				t.Fatalf("Failed to add task: %v", err)
-			}
+				// Create a task
+				task, err := AddTask(ctx, db, "Completion Test", tt.points)
+				if err != nil {
+					t.Fatalf("Failed to add task: %v", err)
+				}
 
-			// Complete the task
-			err = CompleteTask(ctx, db, task.ID)
-			if err != nil {
-				t.Fatalf("Failed to complete task: %v", err)
-			}
+				// Complete the task
+				err = CompleteTask(ctx, db, task.ID)
+				if err != nil {
+					t.Fatalf("Failed to complete task: %v", err)
+				}
 
-			// Verify completion exists
-			var count int
-			err = db.Conn.QueryRow("SELECT COUNT(*) FROM completions WHERE task_id = ?", task.ID).Scan(&count)
-			if err != nil {
-				t.Fatalf("Failed to query completions: %v", err)
-			}
+				// Verify completion was recorded
+				var completion Completion
+				err = db.Conn.QueryRowContext(ctx,
+					"SELECT id, task_id, completed_at, points FROM completions WHERE task_id = ?",
+					task.ID).Scan(&completion.ID, &completion.TaskID, &completion.CompletedAt, &completion.Points)
 
-			if count != 1 {
-				t.Errorf("Expected 1 completion, got %d", count)
-			}
+				if err != nil {
+					t.Fatalf("Failed to query completion: %v", err)
+				}
 
-			// Verify points were recorded correctly
-			var completionPoints int
-			err = db.Conn.QueryRow("SELECT points FROM completions WHERE task_id = ?", task.ID).Scan(&completionPoints)
-			if err != nil {
-				t.Fatalf("Failed to query completion points: %v", err)
-			}
+				expectedPoints := 0
+				if tt.points != nil {
+					expectedPoints = *tt.points
+				}
 
-			expectedPoints := 0
-			if tt.points != nil {
-				expectedPoints = *tt.points
-			}
+				if completion.Points != expectedPoints {
+					t.Errorf("Expected completion points %d, got %d", expectedPoints, completion.Points)
+				}
 
-			if completionPoints != expectedPoints {
-				t.Errorf("Expected completion points %d, got %d", expectedPoints, completionPoints)
-			}
-		})
+				if time.Since(completion.CompletedAt) > time.Minute {
+					t.Error("CompletedAt timestamp is too old")
+				}
+			})
+		}
 	}
+
+// Helper function to create integer pointer
+func intPtr(i int) *int {
+	return &i
 }
 
 // TestClearCompletions verifies that ClearCompletions successfully deletes all completions.
