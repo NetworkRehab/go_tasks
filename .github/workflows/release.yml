@@ -59,7 +59,9 @@ jobs:
           go install github.com/fyne-io/fyne-cross@latest
 
       - name: Build for macOS
-        run: fyne-cross darwin -app-id com.networkrehab.gotasks -arch=amd64
+        run: |
+          tree
+          fyne-cross darwin -app-id com.networkrehab.gotasks -arch=amd64
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
