@@ -70,6 +70,11 @@ func main() {
 		}
 	}()
 
+	ctx = context.Background()
+	if err := db.Migrate(ctx); err != nil {
+		log.Fatal(err)
+	}
+
 	if err := db.Initialize(ctx); err != nil {
 		log.Fatalf("Failed to initialize database schema: %v", err)
 	}

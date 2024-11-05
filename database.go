@@ -47,13 +47,14 @@ func (db *Database) Initialize(ctx context.Context) error {
     }
     defer tx.Rollback()
 
-    // Create tasks table with default points=0
+    // Create tasks table with deleted flag
     if _, err := tx.ExecContext(ctx, `
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             points INTEGER NOT NULL DEFAULT 0,
-            created_at DATETIME NOT NULL
+            created_at DATETIME NOT NULL,
+            deleted BOOLEAN NOT NULL DEFAULT 0
         );`); err != nil {
         return err
     }
@@ -71,6 +72,29 @@ func (db *Database) Initialize(ctx context.Context) error {
     }
 
     return tx.Commit()
+}
+
+// Add migration function to add deleted column if it doesn't exist
+func (db *Database) Migrate(ctx context.Context) error {
+    // Check if deleted column exists
+    var count int
+    err := db.Conn.QueryRowContext(ctx, `
+        SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name='deleted'
+    `).Scan(&count)
+    if err != nil {
+        return err
+    }
+
+    // Add column if it doesn't exist
+    if count == 0 {
+        _, err = db.Conn.ExecContext(ctx, `
+            ALTER TABLE tasks ADD COLUMN deleted BOOLEAN NOT NULL DEFAULT 0
+        `)
+        if err != nil {
+            return err
+        }
+    }
+    return nil
 }
 
 func (db *Database) InsertTask(ctx context.Context, name string, points *int) (int64, error) {

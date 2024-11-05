@@ -65,7 +65,8 @@ func AddTask(ctx context.Context, db *Database, name string, points *int) (*Task
 }
 
 func GetTasks(db *Database) ([]*Task, error) {
-	query := `SELECT id, name, points, created_at FROM tasks`
+	// Only return non-deleted tasks
+	query := `SELECT id, name, points, created_at FROM tasks WHERE deleted = 0`
 	rows, err := db.Conn.Query(query)
 	if err != nil {
 		return nil, err
@@ -114,9 +115,10 @@ func CompleteTask(ctx context.Context, db *Database, taskID int) error {
 
 func GetCompletions(db *Database) ([]*Completion, error) {
 	query := `
-        SELECT c.id, c.task_id, c.completed_at, c.points, t.name 
+        SELECT c.id, c.task_id, c.completed_at, c.points, 
+               CASE WHEN t.deleted = 1 THEN t.name || ' (deleted)' ELSE t.name END as task_name
         FROM completions c
-        JOIN tasks t ON c.task_id = t.id
+        LEFT JOIN tasks t ON c.task_id = t.id
         ORDER BY c.completed_at DESC
     `
 	rows, err := db.Conn.Query(query)
@@ -161,16 +163,18 @@ func DeleteTask(ctx context.Context, db *Database, taskID int) error {
 	}
 	defer tx.Rollback()
 
-	// Delete completions associated with the task
-	_, err = tx.ExecContext(ctx, "DELETE FROM completions WHERE task_id = ?", taskID)
+	// Mark task as deleted instead of removing it
+	result, err := tx.ExecContext(ctx, "UPDATE tasks SET deleted = 1 WHERE id = ?", taskID)
 	if err != nil {
 		return err
 	}
 
-	// Delete the task
-	_, err = tx.ExecContext(ctx, "DELETE FROM tasks WHERE id = ?", taskID)
+	rows, err := result.RowsAffected()
 	if err != nil {
 		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("task not found: %d", taskID)
 	}
 
 	return tx.Commit()
