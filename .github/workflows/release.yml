@@ -55,7 +55,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          brew install pkg-config docker
+          brew install pkg-config docker-buildx
           go install github.com/fyne-io/fyne-cross@latest
 
       - name: Build for macOS
