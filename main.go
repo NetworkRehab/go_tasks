@@ -3,17 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
-	"strconv"
-	"time"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/widget"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
-	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/widget"
+	"log"
+	"strconv"
+	"time"
 )
 
 // Constants for UI configuration
@@ -43,7 +43,7 @@ func main() {
 
 	// Initialize database with error handling
 	db, err := NewDatabase()
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer func() {
@@ -57,8 +57,8 @@ func main() {
 	}
 
 	state := &AppState{
-		db: db,
-		tasks: make([]*Task, 0),
+		db:          db,
+		tasks:       make([]*Task, 0),
 		completions: make([]*Completion, 0),
 	}
 
@@ -70,7 +70,7 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Recovered from panic: %v", r)
-			dialog.ShowError(fmt.Errorf("An unexpected error occurred"), Window)
+			dialog.ShowError(fmt.Errorf("unexpected error occurred"), Window)
 		}
 	}()
 
@@ -104,9 +104,9 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 	// Create containers for tasks and completions
 	tasksContainer := container.NewVBox()
 	completionsContainer := container.NewVBox()
-	
+
 	tasksScroll := container.NewScroll(tasksContainer)
-	tasksScroll.SetMinSize(fyne.NewSize(300, 300))
+	tasksScroll.SetMinSize(fyne.NewSize(300, 500))
 
 	// Helper function to show confirmation dialog
 	showConfirmDialog := func(title, message string, callback func()) {
@@ -114,14 +114,14 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 			if ok {
 				callback()
 			}
-			}, window)
+		}, window)
 	}
 
 	// Add task validation
 	validateTask := func(name string, points int) error {
 		if name == "" {
 			return fmt.Errorf("task name cannot be empty")
-			}
+		}
 		if points < 0 {
 			return fmt.Errorf("points cannot be negative")
 		}
@@ -135,12 +135,12 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 	updateCompletions = func() {
 		completionsContainer.Objects = nil // Clear existing items
 		completions, _ := GetCompletions(state.db)
-		
+
 		for _, c := range completions {
 			// Create a styled completion entry
 			dateStr := c.CompletedAt.Format("Jan 2, 2006")
 			timeStr := c.CompletedAt.Format("3:04 PM")
-			
+
 			// Create delete button
 			deleteBtn := widget.NewButtonWithIcon("", theme.DeleteIcon(), nil)
 
@@ -161,8 +161,8 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 
 			// Update entry card to include delete button
 			entryCard := widget.NewCard("", "", container.NewVBox(
-				widget.NewLabelWithStyle(c.TaskName, 
-					fyne.TextAlignLeading, 
+				widget.NewLabelWithStyle(c.TaskName,
+					fyne.TextAlignLeading,
 					fyne.TextStyle{Bold: true}),
 				container.NewHBox(
 					widget.NewLabelWithStyle(fmt.Sprintf("Completed: %s at %s", dateStr, timeStr),
@@ -175,7 +175,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 					deleteBtn,
 				),
 			))
-			
+
 			completionsContainer.Add(entryCard)
 		}
 	}
@@ -187,15 +187,15 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 			dialog.ShowError(fmt.Errorf("failed to load tasks: %v", err), window)
 			return
 		}
-		
+
 		for _, task := range tasks {
 			// Create a styled task entry with hover effect
 			completeBtn := widget.NewButton("Complete", nil)
 			completeBtn.Importance = widget.HighImportance
-			
+
 			completeBtn.OnTapped = func(taskID int, taskName string) func() {
 				return func() {
-					showConfirmDialog("Complete Task", 
+					showConfirmDialog("Complete Task",
 						fmt.Sprintf("Complete task '%s'?", taskName),
 						func() {
 							ctx := context.Background()
@@ -250,7 +250,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 					deleteBtn,
 				),
 			))
-			
+
 			tasksContainer.Add(taskCard)
 		}
 	}
@@ -261,7 +261,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 
 	// Add clear completions button
 	clearButton := widget.NewButton("Clear History", func() {
-		showConfirmDialog("Clear History", 
+		showConfirmDialog("Clear History",
 			"Are you sure you want to clear all completion history?",
 			func() {
 				ctx := context.Background()
@@ -323,7 +323,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 	addButton.Importance = widget.HighImportance
 
 	clearButton = widget.NewButtonWithIcon("Clear History", theme.ContentClearIcon(), func() {
-		showConfirmDialog("Clear History", 
+		showConfirmDialog("Clear History",
 			"Are you sure you want to clear all completion history?",
 			func() {
 				ctx := context.Background()
@@ -338,14 +338,14 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 
 	// Create scrolling containers with proper sizing
 	leftContent := container.NewVBox(
-		widget.NewCard("Add New Task", "", 
+		widget.NewCard("Add New Task", "",
 			container.NewVBox(
 				nameEntry,
 				pointsEntry,
 				addButton,
 			),
 		),
-		widget.NewCard("Active Tasks", "", 
+		widget.NewCard("Active Tasks", "",
 			container.NewPadded(tasksScroll),
 		),
 	)
@@ -377,7 +377,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 	// Make window larger and set minimum size
 	window.Resize(fyne.NewSize(1024, 768))
 	window.SetContent(split)
-	
+
 	// Return the split container as the main UI
 	return split
 }

@@ -25,7 +25,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
+          go-version: '1.23.2'
 
       - name: Install Dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -33,22 +33,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pkg-config libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxxf86vm-dev
 
-      - name: Build (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Build
         run: |
-          GOOS=${{ matrix.os == 'macos-latest' && 'darwin' || 'linux' }}
-          GOARCH=amd64
+          GOOS=$(go env GOOS)
+          GOARCH=$(go env GOARCH)
           OUTPUT_NAME=go_tasks_${GOOS}_${GOARCH}
           if [ "$GOOS" = "windows" ]; then OUTPUT_NAME+='.exe'; fi
-          go build -o $OUTPUT_NAME .
-
-      - name: Build (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $GOOS = 'windows'
-          $GOARCH = 'amd64'
-          $OUTPUT_NAME = "go_tasks_${GOOS}_${GOARCH}.exe"
           go build -o $OUTPUT_NAME .
 
       - name: Upload Artifact
@@ -75,7 +65,7 @@ jobs:
           else
             VERSION=1.0.${{ github.run_number }}
           fi
-          echo "::set-output name=version::$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release
@@ -88,12 +78,10 @@ jobs:
           draft: false
           prerelease: ${{ github.event_name == 'pull_request' }}
 
-      # Add step to zip binaries
       - name: Zip Binaries
         run: |
           zip -r go_tasks.zip ./binaries
 
-      # Modify Upload Release Assets to upload the zip file
       - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
         env:

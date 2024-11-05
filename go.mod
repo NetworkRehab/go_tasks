@@ -5,6 +5,9 @@ go 1.23.2
 require (
 	fyne.io/fyne/v2 v2.5.2
 	github.com/mattn/go-sqlite3 v1.14.24
+)
+
+require (
 	fyne.io/systray v1.11.0 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

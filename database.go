@@ -18,8 +18,11 @@ func NewDatabase() (*Database, error) {
         return nil, err
     }
 
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
     // Test the connection
-    if err := db.Ping(); err != nil {
+    if err := db.PingContext(ctx); err != nil {
         db.Close()
         return nil, err
     }
@@ -39,7 +42,7 @@ func (db *Database) Close() error {
 func (db *Database) Initialize(ctx context.Context) error {
     // Create tables within transaction
     tx, err := db.Conn.BeginTx(ctx, nil)
-    if (err != nil) {
+    if err != nil {
         return err
     }
     defer tx.Rollback()

@@ -5,8 +5,8 @@ package main
 import (
 	"context"
 	"database/sql" // Add this import
-	"time"
 	"fmt"
+	"time"
 )
 
 type Task struct {
@@ -17,46 +17,46 @@ type Task struct {
 }
 
 func (t *Task) Validate() error {
-    if t.Name == "" {
-        return fmt.Errorf("task name cannot be empty")
-    }
-    if t.Points < 0 {
-        return fmt.Errorf("points cannot be negative")
-    }
-    return nil
+	if t.Name == "" {
+		return fmt.Errorf("task name cannot be empty")
+	}
+	if t.Points < 0 {
+		return fmt.Errorf("points cannot be negative")
+	}
+	return nil
 }
 
 func AddTask(ctx context.Context, db *Database, name string, points int) (*Task, error) {
-    task := &Task{
-        Name:      name,
-        Points:    points,
-        CreatedAt: time.Now(),
-    }
+	task := &Task{
+		Name:      name,
+		Points:    points,
+		CreatedAt: time.Now(),
+	}
 
-    if err := task.Validate(); err != nil {
-        return nil, err
-    }
+	if err := task.Validate(); err != nil {
+		return nil, err
+	}
 
-    tx, err := db.Conn.BeginTx(ctx, nil)
-    if err != nil {
-        return nil, err
-    }
-    defer tx.Rollback()
+	tx, err := db.Conn.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
-    result, err := tx.ExecContext(ctx,
-        `INSERT INTO tasks (name, points, created_at) VALUES (?, ?, ?)`,
-        task.Name, task.Points, task.CreatedAt)
-    if err != nil {
-        return nil, err
-    }
+	result, err := tx.ExecContext(ctx,
+		`INSERT INTO tasks (name, points, created_at) VALUES (?, ?, ?)`,
+		task.Name, task.Points, task.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
 
-    id, err := result.LastInsertId()
-    if err != nil {
-        return nil, err
-    }
-    task.ID = int(id)
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	task.ID = int(id)
 
-    return task, tx.Commit()
+	return task, tx.Commit()
 }
 
 func GetTasks(db *Database) ([]*Task, error) {
@@ -80,31 +80,31 @@ func GetTasks(db *Database) ([]*Task, error) {
 }
 
 func CompleteTask(ctx context.Context, db *Database, taskID int) error {
-    tx, err := db.Conn.BeginTx(ctx, nil)
-    if err != nil {
-        return err
-    }
-    defer tx.Rollback()
+	tx, err := db.Conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-    // Verify task exists
-    var points int
-    err = tx.QueryRowContext(ctx, "SELECT points FROM tasks WHERE id = ?", taskID).Scan(&points)
-    if err != nil {
-        if err == sql.ErrNoRows {
-            return fmt.Errorf("task not found: %d", taskID)
-        }
-        return err
-    }
+	// Verify task exists
+	var points int
+	err = tx.QueryRowContext(ctx, "SELECT points FROM tasks WHERE id = ?", taskID).Scan(&points)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("task not found: %d", taskID)
+		}
+		return err
+	}
 
-    // Record completion
-    _, err = tx.ExecContext(ctx, 
-        `INSERT INTO completions (task_id, completed_at, points) VALUES (?, ?, ?)`,
-        taskID, time.Now(), points)
-    if err != nil {
-        return err
-    }
+	// Record completion
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO completions (task_id, completed_at, points) VALUES (?, ?, ?)`,
+		taskID, time.Now(), points)
+	if err != nil {
+		return err
+	}
 
-    return tx.Commit()
+	return tx.Commit()
 }
 
 func GetCompletions(db *Database) ([]*Completion, error) {
@@ -134,45 +134,44 @@ func GetCompletions(db *Database) ([]*Completion, error) {
 
 // ClearCompletions removes all task completion records from the database and updates tasks if needed
 func ClearCompletions(ctx context.Context, db *Database) error {
-    tx, err := db.Conn.BeginTx(ctx, nil)
-    if err != nil {
-        return err
-    }
-    defer tx.Rollback()
+	tx, err := db.Conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-    // Clear the completions table
-    _, err = tx.ExecContext(ctx, `DELETE FROM completions`)
-    if err != nil {
-        return err
-    }
+	// Clear the completions table
+	_, err = tx.ExecContext(ctx, `DELETE FROM completions`)
+	if err != nil {
+		return err
+	}
 
-    return tx.Commit()
+	return tx.Commit()
 }
 
 func DeleteTask(ctx context.Context, db *Database, taskID int) error {
-    tx, err := db.Conn.BeginTx(ctx, nil)
-    if err != nil {
-        return err
-    }
-    defer tx.Rollback()
+	tx, err := db.Conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-    // Delete completions associated with the task
-    _, err = tx.ExecContext(ctx, "DELETE FROM completions WHERE task_id = ?", taskID)
-    if err != nil {
-        return err
-    }
+	// Delete completions associated with the task
+	_, err = tx.ExecContext(ctx, "DELETE FROM completions WHERE task_id = ?", taskID)
+	if err != nil {
+		return err
+	}
 
-    // Delete the task
-    _, err = tx.ExecContext(ctx, "DELETE FROM tasks WHERE id = ?", taskID)
-    if err != nil {
-        return err
-    }
+	// Delete the task
+	_, err = tx.ExecContext(ctx, "DELETE FROM tasks WHERE id = ?", taskID)
+	if err != nil {
+		return err
+	}
 
-    return tx.Commit()
+	return tx.Commit()
 }
 
 func DeleteCompletion(ctx context.Context, db *Database, completionID int) error {
-    _, err := db.Conn.ExecContext(ctx, "DELETE FROM completions WHERE id = ?", completionID)
-    return err
+	_, err := db.Conn.ExecContext(ctx, "DELETE FROM completions WHERE id = ?", completionID)
+	return err
 }
-
