@@ -55,13 +55,11 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          brew install pkg-config tree
+          brew install pkg-config docker
           go install github.com/fyne-io/fyne-cross@latest
 
       - name: Build for macOS
         run: |
-          tree
-          fyne-cross darwin -help
           fyne-cross darwin -app-id com.networkrehab.gotasks -arch=amd64
 
       - name: Upload Build Artifacts
