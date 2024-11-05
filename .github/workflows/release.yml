@@ -44,8 +44,12 @@ jobs:
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
+        env:
+          CGO_ENABLED: 1
         run: |
-          GOOS=darwin GOARCH=amd64 go build -o go_tasks_darwin_amd64
+          brew install pkg-config
+          go install github.com/go-gl/gl/v2.1/gl@latest
+          GOOS=darwin GOARCH=amd64 CGO_CFLAGS="-I/usr/local/include" CGO_LDFLAGS="-L/usr/local/lib" go build -o go_tasks_darwin_amd64
 
       - name: Build (Linux)
         if: runner.os == 'Linux'
