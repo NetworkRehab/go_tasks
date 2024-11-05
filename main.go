@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 	"time"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -29,16 +28,6 @@ type AppState struct {
 	db          *Database
 	tasks       []*Task
 	completions []*Completion
-}
-
-// Helper function to check if a modifier is present
-func containsModifier(modifiers []fyne.KeyModifier, modifier fyne.KeyModifier) bool {
-	for _, m := range modifiers {
-		if m == modifier {
-			return true
-		}
-	}
-	return false
 }
 
 type Completion struct {
@@ -74,33 +63,33 @@ func main() {
 	}
 
 	// Initialize Fyne application
-	myApp := app.New()
-	myWindow := myApp.NewWindow("Task Tracker")
+	App := app.New()
+	Window := App.NewWindow("Task Tracker")
 
 	// Set up error recovery
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("Recovered from panic: %v", r)
-			dialog.ShowError(fmt.Errorf("An unexpected error occurred"), myWindow)
+			dialog.ShowError(fmt.Errorf("An unexpected error occurred"), Window)
 		}
 	}()
 
 	// Create UI components
-	ui := createUI(myWindow, state)
+	ui := createUI(Window, state)
 
 	// Set up window properties
-	myWindow.SetContent(ui)
-	myWindow.Resize(fyne.NewSize(WindowWidth, WindowHeight))
-	myWindow.SetFixedSize(false)
-	myWindow.CenterOnScreen()
+	Window.SetContent(ui)
+	Window.Resize(fyne.NewSize(WindowWidth, WindowHeight))
+	Window.SetFixedSize(false)
+	Window.CenterOnScreen()
 
 	// Add keyboard shortcuts
-	setupKeyboardShortcuts(myWindow, state)
+	setupKeyboardShortcuts(Window, state)
 
 	// Initial data load
 	refreshData(ctx, state)
 
-	myWindow.ShowAndRun()
+	Window.ShowAndRun()
 }
 
 // Fix createUI function to prevent window recreation
