@@ -1,6 +1,6 @@
-module github.com/ndonathan/go_tasks
+module Tasks
 
-go 1.20
+go 1.23.2
 
 require (
     fyne.io/fyne/v2 v2.5.2
