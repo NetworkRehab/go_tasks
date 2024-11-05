@@ -76,10 +76,10 @@ func (db *Database) Initialize(ctx context.Context) error {
 
 // Add migration function to add deleted column if it doesn't exist
 func (db *Database) Migrate(ctx context.Context) error {
-    // Check if deleted column exists
+    // Check if 'deleted' column exists
     var count int
     err := db.Conn.QueryRowContext(ctx, `
-        SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name='deleted'
+        SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name='deleted';
     `).Scan(&count)
     if err != nil {
         return err
@@ -88,7 +88,7 @@ func (db *Database) Migrate(ctx context.Context) error {
     // Add column if it doesn't exist
     if count == 0 {
         _, err = db.Conn.ExecContext(ctx, `
-            ALTER TABLE tasks ADD COLUMN deleted BOOLEAN NOT NULL DEFAULT 0
+            ALTER TABLE tasks ADD COLUMN deleted BOOLEAN NOT NULL DEFAULT 0;
         `)
         if err != nil {
             return err

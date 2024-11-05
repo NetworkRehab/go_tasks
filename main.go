@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"image/color"
 	"log"
 	"strconv"
 	"time"
@@ -36,6 +37,150 @@ type Completion struct {
 	CompletedAt time.Time
 	Points      int
 	TaskName    string
+}
+
+type customTheme struct{}
+
+func (m *customTheme) BackgroundColor() color.Color {
+	return color.Black
+}
+
+func (m *customTheme) ButtonColor() color.Color {
+	return color.Gray{Y: 230}
+}
+
+func (m *customTheme) DisabledButtonColor() color.Color {
+	return color.Gray{Y: 179}
+}
+
+func (m *customTheme) HyperlinkColor() color.Color {
+	return color.RGBA{R: 0, G: 0, B: 255, A: 255}
+}
+
+func (m *customTheme) TextColor() color.Color {
+	return color.RGBA{R: 0, G: 0, B: 255, A: 255}
+}
+
+func (m *customTheme) DisabledTextColor() color.Color {
+	return color.Gray{Y: 128}
+}
+
+func (m *customTheme) IconColor() color.Color {
+	return color.Black
+}
+
+func (m *customTheme) DisabledIconColor() color.Color {
+	return color.Gray{Y: 128}
+}
+
+func (m *customTheme) PlaceHolderColor() color.Color {
+	return color.Gray{Y: 128}
+}
+
+func (m *customTheme) PrimaryColor() color.Color {
+	return color.RGBA{R: 0, G: 122, B: 255, A: 255}
+}
+
+func (m *customTheme) HoverColor() color.Color {
+	return color.Gray{Y: 204} // 0.8 * 255 = 204
+}
+
+func (m *customTheme) FocusColor() color.Color {
+	return color.RGBA{R: 0, G: 122, B: 255, A: 255}
+}
+func (m *customTheme) ScrollBarColor() color.Color {
+	return color.Gray{Y: uint8(0.6 * 255)}
+}
+
+func (m *customTheme) ShadowColor() color.Color {
+	return color.Gray{Y: uint8(0.4 * 255)}
+}
+
+func (m *customTheme) TextSize() int {
+	return 14
+}
+
+func (m *customTheme) TextFont() fyne.Resource {
+	return theme.DefaultTextFont()
+}
+
+func (m *customTheme) TextBoldFont() fyne.Resource {
+	return theme.DefaultTextBoldFont()
+}
+
+func (m *customTheme) TextItalicFont() fyne.Resource {
+	return theme.DefaultTextItalicFont()
+}
+
+func (m *customTheme) TextBoldItalicFont() fyne.Resource {
+	return theme.DefaultTextBoldItalicFont()
+}
+
+func (m *customTheme) TextMonospaceFont() fyne.Resource {
+	return theme.DefaultTextMonospaceFont()
+}
+
+func (m *customTheme) Font(s fyne.TextStyle) fyne.Resource {
+	if s.Monospace {
+		return theme.DefaultTextMonospaceFont()
+	}
+	if s.Bold {
+		if s.Italic {
+			return theme.DefaultTextBoldItalicFont()
+		}
+		return theme.DefaultTextBoldFont()
+	}
+	if s.Italic {
+		return theme.DefaultTextItalicFont()
+	}
+	return theme.DefaultTextFont()
+}
+
+func (m *customTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
+	return theme.DefaultTheme().Icon(n)
+}
+
+func (m *customTheme) Padding() int {
+	return 4
+}
+
+func (m *customTheme) IconInlineSize() int {
+	return 20
+}
+
+func (m *customTheme) ScrollBarSize() int {
+	return 16
+}
+
+func (m *customTheme) ScrollBarSmallSize() int {
+	return 3
+}
+
+func (m *customTheme) Size(n fyne.ThemeSizeName) float32 {
+	return theme.DefaultTheme().Size(n)
+}
+
+func (m *customTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
+	switch n {
+	case theme.ColorNameBackground:
+		return m.BackgroundColor()
+	case theme.ColorNameButton:
+		return m.ButtonColor()
+	case theme.ColorNameDisabled:
+		return m.DisabledButtonColor()
+	case theme.ColorNameForeground:
+		return m.TextColor()
+	case theme.ColorNamePrimary:
+		return m.PrimaryColor()
+	case theme.ColorNameHover:
+		return m.HoverColor()
+	case theme.ColorNameScrollBar:
+		return m.ScrollBarColor()
+	case theme.ColorNameShadow:
+		return m.ShadowColor()
+	default:
+		return theme.DefaultTheme().Color(n, v)
+	}
 }
 
 func main() {
@@ -87,7 +232,8 @@ func main() {
 
 	// Initialize Fyne application
 	App := app.New()
-	Window := App.NewWindow("Task Tracker")
+	App.Settings().SetTheme(&customTheme{}) // Set custom theme
+	Window := App.NewWindow("Task Manager")
 
 	// Set up error recovery
 	defer func() {

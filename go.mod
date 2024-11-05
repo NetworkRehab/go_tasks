@@ -1,10 +1,11 @@
-module Tasks
+module github.com/ndonathan/go_tasks
 
-go 1.23.2
+go 1.20
 
 require (
-	fyne.io/fyne/v2 v2.5.2
-	github.com/mattn/go-sqlite3 v1.14.24
+    fyne.io/fyne/v2 v2.5.2
+    github.com/mattn/go-sqlite3 v1.14.24
+    // ...existing requirements...
 )
 
 require (
