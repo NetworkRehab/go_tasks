@@ -58,12 +58,6 @@ jobs:
           brew install pkg-config
           go install github.com/fyne-io/fyne-cross@latest
 
-      - name: Set up macOS SDK
-        run: |
-          wget https://github.com/tpoechtrager/osxcross/releases/download/portable-latest/MacOSX11.3.sdk.tar.xz
-          sudo mkdir -p /usr/local/osxcross/SDK
-          sudo tar -xf MacOSX11.3.sdk.tar.xz -C /usr/local/osxcross/SDK/
-
       - name: Build for macOS
         run: fyne-cross darwin -app-id com.networkrehab.gotasks -arch=amd64 -sdk-path /usr/local/osxcross/SDK/MacOSX11.3.sdk
 
