@@ -42,7 +42,7 @@ jobs:
           go build -o $OUTPUT_NAME .
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ github.sha }}
           path: ./go_tasks_*
