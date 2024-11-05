@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"context" // Added missing import
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -39,10 +39,28 @@ type Completion struct {
 }
 
 func main() {
+	db, err := NewDatabase()
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer db.Close()
+
 	ctx := context.Background()
+	if err := db.Initialize(ctx); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+
+	// Example: Insert a new task
+	taskID, err := db.InsertTask(ctx, "Sample Task", nil)
+	if err != nil {
+		log.Fatalf("Failed to insert task: %v", err)
+	}
+	log.Printf("Inserted task with ID: %d", taskID)
+
+	// ...additional code...
 
 	// Initialize database with error handling
-	db, err := NewDatabase()
+	db, err = NewDatabase()
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
@@ -275,23 +293,32 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 
 	// Add task button
 	addButton := widget.NewButton("Add Task", func() {
-		points, err := strconv.Atoi(pointsEntry.Text)
-		if err != nil {
-			dialog.ShowError(fmt.Errorf("invalid points value"), window)
-			return
+		var points *int
+		if pointsEntry.Text != "" {
+			p, err := strconv.Atoi(pointsEntry.Text)
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("invalid points value"), window)
+				return
+			}
+			points = &p
 		}
-
-		if err := validateTask(nameEntry.Text, points); err != nil {
+		
+		pointsValue := 0
+		if points != nil {
+			pointsValue = *points
+		}
+		
+		if err := validateTask(nameEntry.Text, pointsValue); err != nil {
 			dialog.ShowError(err, window)
 			return
 		}
-
-		_, err = AddTask(context.Background(), state.db, nameEntry.Text, points)
+		
+		_, err := AddTask(context.Background(), state.db, nameEntry.Text, &pointsValue)
 		if err != nil {
 			dialog.ShowError(err, window)
 			return
 		}
-
+	
 		nameEntry.SetText("")
 		pointsEntry.SetText("")
 		updateTasks()
@@ -299,18 +326,26 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 
 	// Add tooltips
 	addButton = widget.NewButtonWithIcon("Add Task", theme.ContentAddIcon(), func() {
-		points, err := strconv.Atoi(pointsEntry.Text)
-		if err != nil {
-			dialog.ShowError(fmt.Errorf("invalid points value"), window)
-			return
+		var points *int
+		if pointsEntry.Text != "" {
+			p, err := strconv.Atoi(pointsEntry.Text)
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("invalid points value"), window)
+				return
+			}
+			points = &p
 		}
 
-		if err := validateTask(nameEntry.Text, points); err != nil {
+		pointsValue := 0
+		if points != nil {
+			pointsValue = *points
+		}
+		if err := validateTask(nameEntry.Text, pointsValue); err != nil {
 			dialog.ShowError(err, window)
 			return
 		}
 
-		_, err = AddTask(context.Background(), state.db, nameEntry.Text, points)
+		_, err := AddTask(context.Background(), state.db, nameEntry.Text, points)
 		if err != nil {
 			dialog.ShowError(err, window)
 			return

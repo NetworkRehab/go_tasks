@@ -26,10 +26,15 @@ func (t *Task) Validate() error {
 	return nil
 }
 
-func AddTask(ctx context.Context, db *Database, name string, points int) (*Task, error) {
+func AddTask(ctx context.Context, db *Database, name string, points *int) (*Task, error) {
+	pointsValue := 0
+	if points != nil {
+		pointsValue = *points
+	}
+
 	task := &Task{
 		Name:      name,
-		Points:    points,
+		Points:    pointsValue,
 		CreatedAt: time.Now(),
 	}
 
@@ -174,4 +179,13 @@ func DeleteTask(ctx context.Context, db *Database, taskID int) error {
 func DeleteCompletion(ctx context.Context, db *Database, completionID int) error {
 	_, err := db.Conn.ExecContext(ctx, "DELETE FROM completions WHERE id = ?", completionID)
 	return err
+}
+
+func CreateTask(db *Database, name string, points *int) error {
+    id, err := db.InsertTask(context.Background(), name, points)
+    if err != nil {
+        return err
+    }
+    fmt.Printf("Task created with ID: %d\n", id)
+    return nil
 }

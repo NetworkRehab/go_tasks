@@ -20,25 +20,72 @@ func TestAddTask(t *testing.T) {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	// Test invalid task
-	_, err = AddTask(ctx, db, "", -1)
-	if err == nil {
-		t.Error("Expected error for invalid task, got nil")
+	tests := []struct {
+		name        string
+		taskName    string
+		points      *int
+		shouldError bool
+	}{
+		{
+			name:        "Valid task with points",
+			taskName:    "Test Task",
+			points:      intPtr(10),
+			shouldError: false,
+		},
+		{
+			name:        "Valid task without points",
+			taskName:    "No Points Task",
+			points:      nil,
+			shouldError: false,
+		},
+		{
+			name:        "Empty name",
+			taskName:    "",
+			points:      intPtr(5),
+			shouldError: true,
+		},
+		{
+			name:        "Negative points",
+			taskName:    "Negative Points",
+			points:      intPtr(-1),
+			shouldError: true,
+		},
 	}
 
-	// Test valid task
-	task, err := AddTask(ctx, db, "Test Task", 10)
-	if err != nil {
-		t.Fatal("Failed to add task:", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task, err := AddTask(ctx, db, tt.taskName, tt.points)
+			
+			if tt.shouldError {
+				if err == nil {
+					t.Error("Expected error, got nil")
+				}
+				return
+			}
 
-	if task.Name != "Test Task" {
-		t.Errorf("Expected task name 'Test Task', got '%s'", task.Name)
-	}
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
 
-	if task.Points != 10 {
-		t.Errorf("Expected task points 10, got %d", task.Points)
+			if task.Name != tt.taskName {
+				t.Errorf("Expected task name %s, got %s", tt.taskName, task.Name)
+			}
+
+			expectedPoints := 0
+			if tt.points != nil {
+				expectedPoints = *tt.points
+			}
+
+			if task.Points != expectedPoints {
+				t.Errorf("Expected task points %d, got %d", expectedPoints, task.Points)
+			}
+		})
 	}
+}
+
+// Helper function to create integer pointer
+func intPtr(i int) *int {
+	return &i
 }
 
 // TestTaskCompletion ensures that completing a task adds a record
@@ -47,34 +94,69 @@ func TestTaskCompletion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
-	defer db.Conn.Close()
+	defer db.Close()
+	
 	ctx := context.Background()
 	if err := db.Initialize(ctx); err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	// Add a sample task
-	task, err := AddTask(ctx, db, "Completion Test", 5)
-	if err != nil {
-		t.Fatalf("Failed to add task: %v", err)
+	// Test with both nil and non-nil points
+	tests := []struct {
+		name   string
+		points *int
+	}{
+		{
+			name:   "Complete task with points",
+			points: intPtr(5),
+		},
+		{
+			name:   "Complete task without points",
+			points: nil,
+		},
 	}
 
-	// Complete the task
-	ctx = context.Background()
-	err = CompleteTask(ctx, db, task.ID)
-	if err != nil {
-		t.Fatalf("Failed to complete task: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Add a sample task
+			task, err := AddTask(ctx, db, "Completion Test", tt.points)
+			if err != nil {
+				t.Fatalf("Failed to add task: %v", err)
+			}
 
-	// Verify completion exists
-	var count int
-	err = db.Conn.QueryRow("SELECT COUNT(*) FROM completions WHERE task_id = ?", task.ID).Scan(&count)
-	if err != nil {
-		t.Fatalf("Failed to query completions: %v", err)
-	}
+			// Complete the task
+			err = CompleteTask(ctx, db, task.ID)
+			if err != nil {
+				t.Fatalf("Failed to complete task: %v", err)
+			}
 
-	if count != 1 {
-		t.Fatalf("Expected 1 completion, got %d", count)
+			// Verify completion exists
+			var count int
+			err = db.Conn.QueryRow("SELECT COUNT(*) FROM completions WHERE task_id = ?", task.ID).Scan(&count)
+			if err != nil {
+				t.Fatalf("Failed to query completions: %v", err)
+			}
+
+			if count != 1 {
+				t.Errorf("Expected 1 completion, got %d", count)
+			}
+
+			// Verify points were recorded correctly
+			var completionPoints int
+			err = db.Conn.QueryRow("SELECT points FROM completions WHERE task_id = ?", task.ID).Scan(&completionPoints)
+			if err != nil {
+				t.Fatalf("Failed to query completion points: %v", err)
+			}
+
+			expectedPoints := 0
+			if tt.points != nil {
+				expectedPoints = *tt.points
+			}
+
+			if completionPoints != expectedPoints {
+				t.Errorf("Expected completion points %d, got %d", expectedPoints, completionPoints)
+			}
+		})
 	}
 }
 
@@ -92,7 +174,7 @@ func TestClearCompletions(t *testing.T) {
 
 	// Add and complete a task
 	ctx = context.Background()
-	task, err := AddTask(ctx, db, "Test Task", 10)
+	task, err := AddTask(ctx, db, "Test Task", intPtr(10))
 	if err != nil {
 		t.Fatalf("Failed to add task: %v", err)
 	}

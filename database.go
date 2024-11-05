@@ -42,17 +42,17 @@ func (db *Database) Close() error {
 func (db *Database) Initialize(ctx context.Context) error {
     // Create tables within transaction
     tx, err := db.Conn.BeginTx(ctx, nil)
-    if err != nil {
+    if (err != nil) {
         return err
     }
     defer tx.Rollback()
 
-    // Create tasks table
+    // Create tasks table with default points=0
     if _, err := tx.ExecContext(ctx, `
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            points INTEGER NOT NULL,
+            points INTEGER NOT NULL DEFAULT 0,
             created_at DATETIME NOT NULL
         );`); err != nil {
         return err
@@ -71,4 +71,24 @@ func (db *Database) Initialize(ctx context.Context) error {
     }
 
     return tx.Commit()
+}
+
+func (db *Database) InsertTask(ctx context.Context, name string, points *int) (int64, error) {
+    var pts int
+    if points != nil {
+        pts = *points
+    } else {
+        pts = 0 // Default to 0 if not provided
+    }
+
+    result, err := db.Conn.ExecContext(ctx, `
+        INSERT INTO tasks (name, points, created_at)
+        VALUES (?, ?, ?)`,
+        name, pts, time.Now(),
+    )
+    if err != nil {
+        return 0, err
+    }
+
+    return result.LastInsertId()
 }
