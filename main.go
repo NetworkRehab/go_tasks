@@ -278,54 +278,10 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 	completionsScroll.SetMinSize(fyne.NewSize(300, 400))
 
 	// Add clear completions button
-	clearButton := widget.NewButton("Clear History", func() {
-		showConfirmDialog("Clear History",
-			"Are you sure you want to clear all completion history?",
-			func() {
-				ctx := context.Background()
-				if err := ClearCompletions(ctx, state.db); err != nil {
-					dialog.ShowError(err, window)
-					return
-				}
-				updateCompletions()
-			})
-	})
+	var clearButton *widget.Button
 
-	// Add task button
-	addButton := widget.NewButton("Add Task", func() {
-		var points *int
-		if pointsEntry.Text != "" {
-			p, err := strconv.Atoi(pointsEntry.Text)
-			if err != nil {
-				dialog.ShowError(fmt.Errorf("invalid points value"), window)
-				return
-			}
-			points = &p
-		}
-		
-		pointsValue := 0
-		if points != nil {
-			pointsValue = *points
-		}
-		
-		if err := validateTask(nameEntry.Text, pointsValue); err != nil {
-			dialog.ShowError(err, window)
-			return
-		}
-		
-		_, err := AddTask(context.Background(), state.db, nameEntry.Text, &pointsValue)
-		if err != nil {
-			dialog.ShowError(err, window)
-			return
-		}
-	
-		nameEntry.SetText("")
-		pointsEntry.SetText("")
-		updateTasks()
-	})
-
-	// Add tooltips
-	addButton = widget.NewButtonWithIcon("Add Task", theme.ContentAddIcon(), func() {
+	// Add task button with tooltips
+	addButton := widget.NewButtonWithIcon("Add Task", theme.ContentAddIcon(), func() {
 		var points *int
 		if pointsEntry.Text != "" {
 			p, err := strconv.Atoi(pointsEntry.Text)
