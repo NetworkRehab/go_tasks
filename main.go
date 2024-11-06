@@ -19,10 +19,10 @@ import (
 
 // Constants for UI configuration
 const (
-	WindowWidth  = 1024
-	WindowHeight = 768
-	MinWidth     = 800
-	MinHeight    = 600
+	WindowWidth  = 900
+	WindowHeight = 1024
+	MinWidth     = 430
+	MinHeight    = 480
 )
 
 type AppState struct {
@@ -141,7 +141,7 @@ func (m *customTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
 }
 
 func (m *customTheme) Padding() int {
-	return 4
+	return 8
 }
 
 func (m *customTheme) IconInlineSize() int {
@@ -194,15 +194,6 @@ func main() {
 	if err := db.Initialize(ctx); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
-
-	// Example: Insert a new task
-	taskID, err := db.InsertTask(ctx, "Sample Task", nil)
-	if err != nil {
-		log.Fatalf("Failed to insert task: %v", err)
-	}
-	log.Printf("Inserted task with ID: %d", taskID)
-
-	// ...additional code...
 
 	// Initialize database with error handling
 	db, err = NewDatabase()
@@ -268,14 +259,14 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 	nameEntry.SetPlaceHolder("Enter task name")
 
 	pointsEntry := widget.NewEntry()
-	pointsEntry.SetPlaceHolder("Enter points (0 or more)")
+	pointsEntry.SetPlaceHolder("Enter points")
 
 	// Create containers for tasks and completions
 	tasksContainer := container.NewVBox()
 	completionsContainer := container.NewVBox()
 
 	tasksScroll := container.NewScroll(tasksContainer)
-	tasksScroll.SetMinSize(fyne.NewSize(300, 500))
+	tasksScroll.SetMinSize(fyne.NewSize(400, 760))
 
 	// Helper function to show confirmation dialog
 	showConfirmDialog := func(title, message string, callback func()) {
@@ -426,7 +417,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 
 	// Create a scrollable container for completions
 	completionsScroll := container.NewScroll(completionsContainer)
-	completionsScroll.SetMinSize(fyne.NewSize(300, 400))
+	completionsScroll.SetMinSize(fyne.NewSize(300, 900))
 
 	// Add clear completions button
 	var clearButton *widget.Button
@@ -514,7 +505,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 		container.NewPadded(leftContent),
 		container.NewPadded(rightContent),
 	)
-	split.SetOffset(0.4) // Left panel gets 60% of width
+	split.SetOffset(0.5) // Left panel gets 60% of width
 
 	// Make window larger and set minimum size
 	window.Resize(fyne.NewSize(1024, 768))
