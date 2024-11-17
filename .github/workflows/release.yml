@@ -58,7 +58,7 @@ jobs:
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
           else
-            echo "VERSION=v0.0.${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+            echo "VERSION=v1.1.${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Release
