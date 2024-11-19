@@ -8,6 +8,7 @@ Go Task Tracker is a powerful cross-platform desktop application built with Go a
 
 *macOS support is currently in development and will be available at some point in the future due to complexities with Xcode. 
 
+![Build and Release](./assets/Example_07.png)
 
 ## Key Features 🎯
 
