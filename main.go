@@ -188,25 +188,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
-
-	ctx := context.Background()
-	if err := db.Initialize(ctx); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
-	}
-
-	// Initialize database with error handling
-	db, err = NewDatabase()
-	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
-	}
 	defer func() {
 		if err := db.Close(); err != nil {
 			log.Printf("Error closing database: %v", err)
 		}
 	}()
 
-	ctx = context.Background()
+	ctx := context.Background()
 	if err := db.Migrate(ctx); err != nil {
 		log.Fatal(err)
 	}
@@ -260,6 +248,11 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 
 	pointsEntry := widget.NewEntry()
 	pointsEntry.SetPlaceHolder("Enter points")
+
+	// Add notes input
+	notesEntry := widget.NewMultiLineEntry()
+	notesEntry.SetPlaceHolder("Enter task notes (optional)")
+	notesEntry.SetMinRowsVisible(3)
 
 	// Create containers for tasks and completions
 	tasksContainer := container.NewVBox()
@@ -398,13 +391,57 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 				}
 			}(task.ID, task.Name)
 
+			 // Create notes entry
+            notesEntry := widget.NewMultiLineEntry()
+            notesEntry.SetText(task.Notes)
+            notesEntry.SetPlaceHolder("Add notes...")
+            notesEntry.OnChanged = func(taskID int) func(string) {
+                return func(newNotes string) {
+                    ctx := context.Background()
+                    if err := UpdateTaskNotes(ctx, state.db, taskID, newNotes); err != nil {
+                        dialog.ShowError(err, window)
+                        return
+                    }
+                }
+            }(task.ID)
+
+			// Create editable points entry
+			pointsEntry := widget.NewEntry()
+			pointsEntry.SetText(fmt.Sprintf("%d", task.Points))
+
+			pointsEntry.OnChanged = func(taskID int, oldPoints int) func(string) {
+                return func(newPoints string) {
+                    points, err := strconv.Atoi(newPoints)
+                    if err != nil || points < 0 {
+                        pointsEntry.SetText(fmt.Sprintf("%d", oldPoints))
+                        dialog.ShowError(fmt.Errorf("invalid points value"), window)
+                        return
+                    }
+                    
+                    ctx := context.Background()
+                    if err := UpdateTaskPoints(ctx, state.db, taskID, points); err != nil {
+                        pointsEntry.SetText(fmt.Sprintf("%d", oldPoints))
+                        dialog.ShowError(err, window)
+                        return
+                    }
+                }
+            }(task.ID, task.Points)
+
+			 // Wrap pointsEntry in a fixed size container
+			pointsContainer := container.NewHBox(
+				pointsEntry,
+				widget.NewLabel("points"),
+			)
+			pointsContainer.Resize(fyne.NewSize(300, pointsEntry.MinSize().Height))
+
 			// Update task card to include delete button
 			taskCard := widget.NewCard("", "", container.NewVBox(
 				widget.NewLabelWithStyle(task.Name,
 					fyne.TextAlignLeading,
 					fyne.TextStyle{Bold: true}),
+				notesEntry,
 				container.NewHBox(
-					pointsLabel,
+					pointsContainer,  // Use the new container here
 					layout.NewSpacer(),
 					completeBtn,
 					deleteBtn,
@@ -443,7 +480,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 			return
 		}
 
-		_, err := AddTask(context.Background(), state.db, nameEntry.Text, points)
+		_, err := AddTask(context.Background(), state.db, nameEntry.Text, points, notesEntry.Text)
 		if err != nil {
 			dialog.ShowError(err, window)
 			return
@@ -451,6 +488,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 
 		nameEntry.SetText("")
 		pointsEntry.SetText("")
+		notesEntry.SetText("")
 		updateTasks()
 	})
 	addButton.Importance = widget.HighImportance
@@ -475,6 +513,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 			container.NewVBox(
 				nameEntry,
 				pointsEntry,
+				notesEntry,
 				addButton,
 			),
 		),

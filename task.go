@@ -13,6 +13,7 @@ type Task struct {
 	ID        int
 	Name      string
 	Points    int
+	Notes     string
 	CreatedAt time.Time
 }
 
@@ -26,7 +27,7 @@ func (t *Task) Validate() error {
 	return nil
 }
 
-func AddTask(ctx context.Context, db *Database, name string, points *int) (*Task, error) {
+func AddTask(ctx context.Context, db *Database, name string, points *int, notes string) (*Task, error) {
 	pointsValue := 0
 	if points != nil {
 		pointsValue = *points
@@ -35,6 +36,7 @@ func AddTask(ctx context.Context, db *Database, name string, points *int) (*Task
 	task := &Task{
 		Name:      name,
 		Points:    pointsValue,
+		Notes:     notes,
 		CreatedAt: time.Now(),
 	}
 
@@ -49,8 +51,8 @@ func AddTask(ctx context.Context, db *Database, name string, points *int) (*Task
 	defer tx.Rollback()
 
 	result, err := tx.ExecContext(ctx,
-		`INSERT INTO tasks (name, points, created_at) VALUES (?, ?, ?)`,
-		task.Name, task.Points, task.CreatedAt)
+		`INSERT INTO tasks (name, points, notes, created_at) VALUES (?, ?, ?, ?)`,
+		task.Name, task.Points, task.Notes, task.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +68,7 @@ func AddTask(ctx context.Context, db *Database, name string, points *int) (*Task
 
 func GetTasks(db *Database) ([]*Task, error) {
 	// Only return non-deleted tasks
-	query := `SELECT id, name, points, created_at FROM tasks WHERE deleted = 0`
+	query := `SELECT id, name, points, notes, created_at FROM tasks WHERE deleted = 0`
 	rows, err := db.Conn.Query(query)
 	if err != nil {
 		return nil, err
@@ -76,7 +78,7 @@ func GetTasks(db *Database) ([]*Task, error) {
 	var tasks []*Task
 	for rows.Next() {
 		task := &Task{}
-		err := rows.Scan(&task.ID, &task.Name, &task.Points, &task.CreatedAt)
+		err := rows.Scan(&task.ID, &task.Name, &task.Points, &task.Notes, &task.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -185,11 +187,67 @@ func DeleteCompletion(ctx context.Context, db *Database, completionID int) error
 	return err
 }
 
-func CreateTask(db *Database, name string, points *int) error {
-    id, err := db.InsertTask(context.Background(), name, points)
+// Update function signature to match usage
+func CreateTask(db *Database, name string, points *int, notes string) error {
+    id, err := db.InsertTask(context.Background(), name, points, notes)
     if err != nil {
         return err
     }
     fmt.Printf("Task created with ID: %d\n", id)
     return nil
+}
+
+func UpdateTaskNotes(ctx context.Context, db *Database, taskID int, notes string) error {
+    tx, err := db.Conn.BeginTx(ctx, nil)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback()
+
+    result, err := tx.ExecContext(ctx, 
+        "UPDATE tasks SET notes = ? WHERE id = ? AND deleted = 0", 
+        notes, taskID)
+    if err != nil {
+        return err
+    }
+
+    rows, err := result.RowsAffected()
+    if err != nil {
+        return err
+    }
+    if rows == 0 {
+        return fmt.Errorf("task not found: %d", taskID)
+    }
+
+    return tx.Commit()
+}
+
+// Add new function to update task points
+func UpdateTaskPoints(ctx context.Context, db *Database, taskID int, points int) error {
+    if points < 0 {
+        return fmt.Errorf("points cannot be negative")
+    }
+
+    tx, err := db.Conn.BeginTx(ctx, nil)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback()
+
+    result, err := tx.ExecContext(ctx, 
+        "UPDATE tasks SET points = ? WHERE id = ? AND deleted = 0", 
+        points, taskID)
+    if err != nil {
+        return err
+    }
+
+    rows, err := result.RowsAffected()
+    if err != nil {
+        return err
+    }
+    if rows == 0 {
+        return fmt.Errorf("task not found: %d", taskID)
+    }
+
+    return tx.Commit()
 }

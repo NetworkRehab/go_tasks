@@ -10,7 +10,7 @@ import (
 	"database/sql"
 )
 
-const testDBPath = "test_task_tracker.db"
+const testDBPath = "./sqlite_db/test_task_tracker.db"
 
 func setupTestDB(t *testing.T) (*Database, context.Context, func()) {
 	// Remove any existing test database
@@ -38,6 +38,10 @@ func setupTestDB(t *testing.T) (*Database, context.Context, func()) {
 
 // TestAddTask tests the AddTask function.
 func TestAddTask(t *testing.T) {
+	if err := os.MkdirAll("./sqlite_db", 0755); err != nil {
+		t.Fatalf("Failed to create test database directory: %v", err)
+	}
+
 	db, ctx, cleanup := setupTestDB(t)
 	defer cleanup()
 
@@ -75,7 +79,8 @@ func TestAddTask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task, err := AddTask(ctx, db, tt.taskName, tt.points)
+			// Update call to include notes parameter
+			task, err := AddTask(ctx, db, tt.taskName, tt.points, "")
 			
 			if tt.wantErr {
 				if err == nil {
@@ -131,8 +136,8 @@ func TestTaskCompletion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-				// Create a task
-				task, err := AddTask(ctx, db, "Completion Test", tt.points)
+					// Update call to include notes parameter
+					task, err := AddTask(ctx, db, "Completion Test", tt.points, "")
 				if err != nil {
 					t.Fatalf("Failed to add task: %v", err)
 				}
@@ -188,7 +193,8 @@ func TestClearCompletions(t *testing.T) {
 
 	// Add and complete a task
 	ctx = context.Background()
-	task, err := AddTask(ctx, db, "Test Task", intPtr(10))
+	// Update call to include notes parameter
+	task, err := AddTask(ctx, db, "Test Task", intPtr(10), "")
 	if err != nil {
 		t.Fatalf("Failed to add task: %v", err)
 	}
