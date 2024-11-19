@@ -1,10 +1,13 @@
-# Task Tracker
-
 [![Build and Release](./assets/buildandrelease.jpg)](https://github.com/ndonathan/go_tasks/actions/workflows/release.yml)
+
+# Task Tracker 📝
 
 ## Introduction 🚀
 
-Go Task Tracker is a powerful cross-platform desktop application built with Go and [Fyne](https://fyne.io/). This robust task management tool helps users efficiently organize, track, and complete tasks while maintaining a comprehensive history of achievements. Supporting macOS, Linux, and Windows platforms, it delivers a consistent and intuitive experience across all operating systems.
+Go Task Tracker is a powerful cross-platform desktop application built with Go and [Fyne](https://fyne.io/). This robust task management tool helps users efficiently organize, track, and complete tasks while maintaining a comprehensive history of achievements. Supporting macOS*, Linux, and Windows platforms, it delivers a consistent and intuitive experience across all operating systems.
+
+*macOS support is currently in development and will be available at some point in the future due to complexities with Xcode. 
+
 
 ## Key Features 🎯
 
