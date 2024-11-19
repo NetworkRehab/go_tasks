@@ -1,6 +1,6 @@
-# Go Task Tracker
+# Task Tracker
 
-[![Build and Release](https://github.com/ndonathan/go_tasks/actions/workflows/release.yml/badge.svg)](https://github.com/ndonathan/go_tasks/actions/workflows/release.yml)
+[![Build and Release](./assets/buildandrelease.jpg)](https://github.com/ndonathan/go_tasks/actions/workflows/release.yml)
 
 ## Introduction 🚀
 
@@ -116,10 +116,3 @@ We welcome contributions! Follow these steps:
 - Licensed under MIT License
 - Built with [Fyne](https://fyne.io/) UI toolkit
 - Special thanks to all contributors
-
-## Support & Community 💬
-
-- Report issues on GitHub
-- Join discussions in Pull Requests
-- Follow project updates
-
