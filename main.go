@@ -58,7 +58,7 @@ func (m *customTheme) HyperlinkColor() color.Color {
 }
 
 func (m *customTheme) TextColor() color.Color {
-	return color.RGBA{R: 0, G: 0, B: 255, A: 255}
+	return color.RGBA{R: 0, G: 150, B: 255, A: 255}
 }
 
 func (m *customTheme) DisabledTextColor() color.Color {
