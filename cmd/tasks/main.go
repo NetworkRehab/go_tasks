@@ -46,7 +46,7 @@ func (m *customTheme) BackgroundColor() color.Color {
 }
 
 func (m *customTheme) ButtonColor() color.Color {
-	return color.Gray{Y: 230}
+	return color.RGBA{R: 255, G: 255, B: 0, A: 255} // Yellow color
 }
 
 func (m *customTheme) DisabledButtonColor() color.Color {
@@ -74,7 +74,7 @@ func (m *customTheme) DisabledIconColor() color.Color {
 }
 
 func (m *customTheme) PlaceHolderColor() color.Color {
-	return color.Gray{Y: 128}
+	return color.RGBA{R: 255, G: 128, B: 0, A: 99} // Yellow color
 }
 
 func (m *customTheme) PrimaryColor() color.Color {
@@ -89,11 +89,11 @@ func (m *customTheme) FocusColor() color.Color {
 	return color.RGBA{R: 0, G: 122, B: 255, A: 255}
 }
 func (m *customTheme) ScrollBarColor() color.Color {
-	return color.Gray{Y: uint8(0.6 * 255)}
+	return color.RGBA{R: 255, G: 0, B: 0, A: 255} // Red color
 }
 
 func (m *customTheme) ShadowColor() color.Color {
-	return color.Gray{Y: uint8(0.4 * 255)}
+	return color.RGBA{R: 255, G: 0, B: 0, A: 99} // Yellow color
 }
 
 func (m *customTheme) TextSize() int {
@@ -232,10 +232,10 @@ func main() {
 	Window.CenterOnScreen()
 
 	// Add keyboard shortcuts
-	setupKeyboardShortcuts(Window, state)
+	setupKeyboardShortcuts(Window)
 
 	// Initial data load
-	refreshData(ctx, state)
+	refreshData(state)
 
 	Window.ShowAndRun()
 }
@@ -554,7 +554,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 	return split
 }
 
-func setupKeyboardShortcuts(w fyne.Window, state *AppState) {
+func setupKeyboardShortcuts(w fyne.Window) {
 	shortcut := &desktop.CustomShortcut{
 		KeyName:  fyne.KeyN,
 		Modifier: fyne.KeyModifierControl,
@@ -565,7 +565,7 @@ func setupKeyboardShortcuts(w fyne.Window, state *AppState) {
 	})
 }
 
-func refreshData(ctx context.Context, state *AppState) {
+func refreshData(state *AppState) {
 	// Refresh tasks and completions
 	tasks, err := GetTasks(state.db)
 	if err != nil {
