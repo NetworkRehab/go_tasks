@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"image/color"
 	"log"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -289,6 +290,11 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 		completionsContainer.Objects = nil // Clear existing items
 		completions, _ := GetCompletions(state.db)
 
+		// Sort completions by points in descending order
+		sort.Slice(completions, func(i, j int) bool {
+			return completions[i].Points > completions[j].Points
+		})
+
 		for _, c := range completions {
 			// Create a styled completion entry
 			dateStr := c.CompletedAt.Format("Jan 2, 2006")
@@ -340,6 +346,11 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 			dialog.ShowError(fmt.Errorf("failed to load tasks: %v", err), window)
 			return
 		}
+
+		// Sort tasks by points in descending order
+		sort.Slice(tasks, func(i, j int) bool {
+			return tasks[i].Points > tasks[j].Points
+		})
 
 		for _, task := range tasks {
 			// Create a styled task entry with hover effect
