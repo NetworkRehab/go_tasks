@@ -259,7 +259,7 @@ func createUI(window fyne.Window, state *AppState) fyne.CanvasObject {
 	completionsContainer := container.NewVBox()
 
 	tasksScroll := container.NewScroll(tasksContainer)
-	tasksScroll.SetMinSize(fyne.NewSize(400, 760))
+	tasksScroll.SetMinSize(fyne.NewSize(400, 684))
 
 	// Helper function to show confirmation dialog
 	showConfirmDialog := func(title, message string, callback func()) {

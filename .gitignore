@@ -30,7 +30,8 @@ go.work.sum
 *.sqlite
 *.sqlite3
 dump.sql
-sqlite_db/*.db
+*.db-shm
+*.db-wal
 
 # IDE and editor directories
 .vscode/

@@ -15,12 +15,12 @@ type Database struct {
 
 func NewDatabase() (*Database, error) {
     // Ensure sqlite_db directory exists
-    if err := os.MkdirAll("./sqlite_db", 0755); err != nil {
+    if err := os.MkdirAll("../sqlite_db", 0755); err != nil {
         return nil, fmt.Errorf("failed to create database directory: %v", err)
     }
 
     // Updated database path to store in sqlite_db directory
-    db, err := sql.Open("sqlite3", "./sqlite_db/task_tracker.db?_timeout=5000&_journal_mode=WAL")
+    db, err := sql.Open("sqlite3", "../sqlite_db/task_tracker.db?_timeout=5000&_journal_mode=WAL")
     if err != nil {
         return nil, err
     }

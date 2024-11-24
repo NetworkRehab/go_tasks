@@ -30,10 +30,10 @@ jobs:
           go install github.com/fyne-io/fyne-cross@latest
 
       - name: Build for Windows
-        run: fyne-cross windows -app-id com.networkrehab.gotasks -arch=amd64 -ldflags -H=windowsgui
+        run: fyne-cross windows -app-id com.networkrehab.gotasks -arch=amd64 -ldflags -H=windowsgui ./cmd/tasks
 
       - name: Build for Linux
-        run: fyne-cross linux -app-id com.networkrehab.gotasks -arch=amd64
+        run: fyne-cross linux -app-id com.networkrehab.gotasks -arch=amd64 ./cmd/tasks
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
