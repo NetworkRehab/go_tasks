@@ -32,7 +32,7 @@ jobs:
       - name: Build for Windows
         run: |
           cd cmd/tasks/
-          fyne-cross windows -arch=* -ldflags -H=windowsgui -appID com.networkrehab
+          fyne-cross windows -arch=* -ldflags -H=windowsgui -appID 'com.networkrehab'
 
       - name: Build for Linux
         run: fyne-cross linux -arch=*
