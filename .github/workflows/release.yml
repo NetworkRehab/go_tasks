@@ -47,8 +47,8 @@ jobs:
         with:
           name: go_tasks_builds
           path: |
-            fyne-cross/dist/*/
-            !fyne-cross/dist/*/deps/
+            cmd/tasks/fyne-cross/dist/*/
+            !cmd/tasks/fyne-cross/dist/*/deps/
 
   release:
     needs: [build]
