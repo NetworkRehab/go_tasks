@@ -32,10 +32,10 @@ jobs:
       - name: Build for Windows
         run: |
           cd cmd/tasks/
-          fyne-cross windows -arch=* -ldflags -H=windowsgui
+          fyne-cross windows -arch=* -ldflags -H=windowsgui --appID com.networkrehab
 
       - name: Build for Linux
-        run: fyne-cross linux -arch=* ./cmd/tasks
+        run: fyne-cross linux -arch=*
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
