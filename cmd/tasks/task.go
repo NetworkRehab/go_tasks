@@ -125,29 +125,41 @@ func CompleteTask(ctx context.Context, db *Database, taskID int) error {
 }
 
 func GetCompletions(db *Database) ([]*Completion, error) {
-	query := `
-        SELECT c.id, c.task_id, c.completed_at, c.points, 
-               CASE WHEN t.deleted = 1 THEN t.name || ' (deleted)' ELSE t.name END as task_name
-        FROM completions c
-        LEFT JOIN tasks t ON c.task_id = t.id
-        ORDER BY c.completed_at DESC
+    query := `
+        SELECT 
+            completion.id,
+            completion.task_id,
+            completion.completed_at,
+            completion.points,
+            CASE WHEN task.deleted = 1 
+                THEN task.name || ' (deleted)' 
+                ELSE task.name 
+            END as task_name
+        FROM completions completion
+        LEFT JOIN tasks task ON completion.task_id = task.id
+        ORDER BY completion.completed_at DESC
     `
-	rows, err := db.Conn.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+    rows, err := db.Conn.Query(query)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	var completions []*Completion
-	for rows.Next() {
-		c := &Completion{}
-		err := rows.Scan(&c.ID, &c.TaskID, &c.CompletedAt, &c.Points, &c.TaskName)
-		if err != nil {
-			return nil, err
-		}
-		completions = append(completions, c)
-	}
-	return completions, nil
+    var completions []*Completion
+    for rows.Next() {
+        completion := &Completion{}
+        err := rows.Scan(
+            &completion.ID,
+            &completion.TaskID,
+            &completion.CompletedAt,
+            &completion.Points,
+            &completion.TaskName)
+        if err != nil {
+            return nil, err
+        }
+        completions = append(completions, completion)
+    }
+    return completions, nil
 }
 
 // ClearCompletions removes all task completion records from the database and updates tasks if needed
@@ -278,6 +290,7 @@ func CreateCompletion(db *Database, taskID int, taskName string, points int, com
     result, err := db.Conn.Exec(`
         INSERT INTO completions (task_id, completed_at, points)
         VALUES (?, ?, ?)`,
+
         taskID, completedAt, points)
     if err != nil {
         return nil, err

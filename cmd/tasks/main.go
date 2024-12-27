@@ -78,8 +78,8 @@ func runServer(appState *AppState) {
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func handleHome(appState *AppState) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func handleHome(_ *AppState) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
 		tmpl := `
 <!DOCTYPE html>
 <html>
@@ -109,15 +109,15 @@ func handleHome(appState *AppState) http.HandlerFunc {
 	</div>
 </body>
 </html>`
-		w.Write([]byte(tmpl))
+		writer.Write([]byte(tmpl))
 	}
 }
 
 func handleTasks(appState *AppState) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
+    return func(writer http.ResponseWriter, request *http.Request) {
         tasks, err := GetTasks(appState.db)
-        if (err != nil) {
-            http.Error(w, err.Error(), 500)
+        if err != nil {
+            http.Error(writer, err.Error(), 500)
             return
         }
 
@@ -136,132 +136,132 @@ func handleTasks(appState *AppState) http.HandlerFunc {
             {{end}}
         </div>`
 
-        t := template.Must(template.New("tasks").Parse(tmpl))
-        t.Execute(w, tasks)
+        template := template.Must(template.New("tasks").Parse(tmpl))
+        template.Execute(writer, tasks)
     }
 }
 
 func handleAddTask(appState *AppState) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	return func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != "POST" {
+			http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		name := r.FormValue("name")
-		points, _ := strconv.Atoi(r.FormValue("points"))
+		name := request.FormValue("name")
+		points, _ := strconv.Atoi(request.FormValue("points"))
 		
-		_, err := appState.db.InsertTask(r.Context(), name, &points, "")
+		_, err := appState.db.InsertTask(request.Context(), name, &points, "")
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			http.Error(writer, err.Error(), 500)
 			return
 		}
 
 		// Trigger refresh
-		w.Header().Set("HX-Trigger", "taskChange")
-		w.Write([]byte(""))
+		writer.Header().Set("HX-Trigger", "taskChange")
+		writer.Write([]byte(""))
 	}
 }
 
 func handleCompleteTask(appState *AppState) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if r.Method != "POST" {
-            http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+    return func(writer http.ResponseWriter, request *http.Request) {
+        if request.Method != "POST" {
+            http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
             return
         }
 
-        taskID, err := strconv.Atoi(r.URL.Path[len("/task/complete/"):])
+        taskID, err := strconv.Atoi(request.URL.Path[len("/task/complete/"):])
         if err != nil {
-            http.Error(w, "Invalid task ID", http.StatusBadRequest)
+            http.Error(writer, "Invalid task ID", http.StatusBadRequest)
             return
         }
 
-        if err := CompleteTask(r.Context(), appState.db, taskID); err != nil {
-            http.Error(w, err.Error(), http.StatusInternalServerError)
+        if err := CompleteTask(request.Context(), appState.db, taskID); err != nil {
+            http.Error(writer, err.Error(), http.StatusInternalServerError)
             return
         }
 
-        w.Header().Set("HX-Trigger", "taskChange")
-        w.Write([]byte(""))
+        writer.Header().Set("HX-Trigger", "taskChange")
+        writer.Write([]byte(""))
     }
 }
 
 func handleDeleteTask(appState *AppState) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	return func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != "DELETE" {
+			http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
 		// Extract task ID from URL path
-		taskID, err := strconv.Atoi(r.URL.Path[len("/task/delete/"):])
+		taskID, err := strconv.Atoi(request.URL.Path[len("/task/delete/"):])
 		if err != nil {
-			http.Error(w, "Invalid task ID", http.StatusBadRequest)
+			http.Error(writer, "Invalid task ID", http.StatusBadRequest)
 			return
 		}
 
 		// Delete the task
-		err = appState.db.DeleteTask(r.Context(), taskID)
+		err = appState.db.DeleteTask(request.Context(), taskID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		// Trigger refresh
-		w.Header().Set("HX-Trigger", "taskChange")
-		w.Write([]byte(""))
+		writer.Header().Set("HX-Trigger", "taskChange")
+		writer.Write([]byte(""))
 	}
 }
 
 func handleCompletions(appState *AppState) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		completions, err := GetCompletions(appState.db)
-		if (err != nil) {
-			http.Error(w, err.Error(), 500)
-			return
-		}
+    return func(writer http.ResponseWriter, request *http.Request) {
+        completions, err := GetCompletions(appState.db)
+        if err != nil {
+            http.Error(writer, err.Error(), 500)
+            return
+        }
 
-		tmpl := `
-		<div id="completions">
-			{{range .}}
-			<div class="completion">
-				{{.TaskName}} ({{.Points}} pts) - {{.CompletedAt.Format "2006-01-02 15:04"}}
-				<button hx-delete="/completion/delete/{{.ID}}"
-						hx-swap="none"
-						hx-trigger="click">Delete</button>
-			</div>
-			{{end}}
-		</div>`
+        tmpl := `
+        <div id="completions">
+            {{range .}}
+            <div class="completion">
+                {{.TaskName}} ({{.Points}} pts) - {{.CompletedAt.Format "2006-01-02 15:04"}}
+                <button hx-delete="/completion/delete/{{.ID}}"
+                        hx-swap="none"
+                        hx-trigger="click">Delete</button>
+            </div>
+            {{end}}
+        </div>`
 
-		t := template.Must(template.New("completions").Parse(tmpl))
-		t.Execute(w, completions)
-	}
+        template := template.Must(template.New("completions").Parse(tmpl))
+        template.Execute(writer, completions)
+    }
 }
 
 func handleDeleteCompletion(appState *AppState) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "DELETE" {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	return func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != "DELETE" {
+			http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
 		// Extract completion ID from URL path
-		completionID, err := strconv.Atoi(r.URL.Path[len("/completion/delete/"):])
+		completionID, err := strconv.Atoi(request.URL.Path[len("/completion/delete/"):])
 		if err != nil {
-			http.Error(w, "Invalid completion ID", http.StatusBadRequest)
+			http.Error(writer, "Invalid completion ID", http.StatusBadRequest)
 			return
 		}
 
 		// Delete the completion
-		err = appState.db.DeleteCompletion(r.Context(), completionID)
+		err = appState.db.DeleteCompletion(request.Context(), completionID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		// Trigger refresh
-		w.Header().Set("HX-Trigger", "taskChange")
-		w.Write([]byte(""))
+		writer.Header().Set("HX-Trigger", "taskChange")
+		writer.Write([]byte(""))
 	}
 }
 
