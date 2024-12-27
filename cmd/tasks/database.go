@@ -5,8 +5,8 @@ import (
     "database/sql"
     "time"
     "os"
-    "fmt"  // Add missing import
-    _ "github.com/mattn/go-sqlite3"
+    "fmt"
+    _ "modernc.org/sqlite" // Changed import from mattn/go-sqlite3
 )
 
 type Database struct {
@@ -19,8 +19,8 @@ func NewDatabase() (*Database, error) {
         return nil, fmt.Errorf("failed to create database directory: %v", err)
     }
 
-    // Updated database path to store in sqlite_db directory
-    db, err := sql.Open("sqlite3", "../sqlite_db/task_tracker.db?_timeout=5000&_journal_mode=WAL")
+    // Remove WAL mode as it's not needed with modernc/sqlite
+    databaseConnection, err := sql.Open("sqlite", "../sqlite_db/task_tracker.db")
     if err != nil {
         return nil, err
     }
@@ -29,17 +29,17 @@ func NewDatabase() (*Database, error) {
     defer cancel()
 
     // Test the connection
-    if err := db.PingContext(ctx); err != nil {
-        db.Close()
+    if err := databaseConnection.PingContext(ctx); err != nil {
+        databaseConnection.Close()
         return nil, err
     }
 
     // Set connection pool settings
-    db.SetMaxOpenConns(10)
-    db.SetMaxIdleConns(5)
-    db.SetConnMaxLifetime(time.Hour)
+    databaseConnection.SetMaxOpenConns(10)
+    databaseConnection.SetMaxIdleConns(5)
+    databaseConnection.SetConnMaxLifetime(time.Hour)
 
-    return &Database{Conn: db}, nil
+    return &Database{Conn: databaseConnection}, nil
 }
 
 func (db *Database) Close() error {
@@ -48,14 +48,14 @@ func (db *Database) Close() error {
 
 func (db *Database) Initialize(ctx context.Context) error {
     // Create tables within transaction
-    tx, err := db.Conn.BeginTx(ctx, nil)
+    transaction, err := db.Conn.BeginTx(ctx, nil)
     if (err != nil) {
         return err
     }
-    defer tx.Rollback()
+    defer transaction.Rollback()
 
     // Create tasks table with deleted flag and notes
-    if _, err := tx.ExecContext(ctx, `
+    if _, err := transaction.ExecContext(ctx, `
         CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -68,7 +68,7 @@ func (db *Database) Initialize(ctx context.Context) error {
     }
 
     // Create completions table
-    if _, err := tx.ExecContext(ctx, `
+    if _, err := transaction.ExecContext(ctx, `
         CREATE TABLE IF NOT EXISTS completions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             task_id INTEGER NOT NULL,
@@ -79,67 +79,100 @@ func (db *Database) Initialize(ctx context.Context) error {
         return err
     }
 
-    return tx.Commit()
+    return transaction.Commit()
 }
 
 // Add migration function to add deleted column if it doesn't exist
 func (db *Database) Migrate(ctx context.Context) error {
-    // Check if deleted column exists
-    var count int
-    err := db.Conn.QueryRowContext(ctx, `
-        SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name='deleted'
-    `).Scan(&count)
+    // Ensure all necessary migrations are applied
+    migrations := []struct {
+        query string
+    }{
+        {
+            query: `
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    points INTEGER NOT NULL DEFAULT 0,
+                    notes TEXT,
+                    created_at DATETIME NOT NULL,
+                    deleted BOOLEAN NOT NULL DEFAULT 0
+                );`,
+        },
+        {
+            query: `
+                CREATE TABLE IF NOT EXISTS completions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id INTEGER NOT NULL,
+                    completed_at DATETIME NOT NULL,
+                    points INTEGER NOT NULL,
+                    FOREIGN KEY(task_id) REFERENCES tasks(id)
+                );`,
+        },
+        // Add more migrations as needed
+    }
+
+    transaction, err := db.Conn.BeginTx(ctx, nil)
     if err != nil {
         return err
     }
+    defer transaction.Rollback()
 
-    // Add column if it doesn't exist
-    if count == 0 {
-        _, err = db.Conn.ExecContext(ctx, `
-            ALTER TABLE tasks ADD COLUMN deleted BOOLEAN NOT NULL DEFAULT 0
-        `)
+    for _, migration := range migrations {
+        _, err := transaction.ExecContext(ctx, migration.query)
         if err != nil {
             return err
         }
     }
 
-    // Add notes column if it doesn't exist
-    err = db.Conn.QueryRowContext(ctx, `
-        SELECT COUNT(*) FROM pragma_table_info('tasks') WHERE name='notes'
-    `).Scan(&count)
-    if err != nil {
-        return err
-    }
-
-    if count == 0 {
-        _, err = db.Conn.ExecContext(ctx, `
-            ALTER TABLE tasks ADD COLUMN notes TEXT
-        `)
-        if err != nil {
-            return err
-        }
-    }
-
-    return nil
+    return transaction.Commit()
 }
 
 // Modify InsertTask to include notes
 func (db *Database) InsertTask(ctx context.Context, name string, points *int, notes string) (int64, error) {
-    var pts int
+    var taskPoints int
     if points != nil {
-        pts = *points
+        taskPoints = *points
     } else {
-        pts = 0 // Default to 0 if not provided
+        taskPoints = 0 // Default to 0 if not provided
     }
 
     result, err := db.Conn.ExecContext(ctx, `
         INSERT INTO tasks (name, points, notes, created_at)
         VALUES (?, ?, ?, ?)`,
-        name, pts, notes, time.Now(),
+
+        name, taskPoints, notes, time.Now(),
     )
     if err != nil {
         return 0, err
     }
 
     return result.LastInsertId()
+}
+
+// Add DeleteTask method to Database struct
+func (db *Database) DeleteTask(ctx context.Context, taskID int) error {
+    result, err := db.Conn.ExecContext(ctx, 
+        "UPDATE tasks SET deleted = 1 WHERE id = ?", 
+        taskID)
+    if err != nil {
+        return err
+    }
+
+    rows, err := result.RowsAffected()
+    if err != nil {
+        return err
+    }
+    if rows == 0 {
+        return fmt.Errorf("task not found: %d", taskID)
+    }
+    return nil
+}
+
+// Add DeleteCompletion method to Database struct
+func (db *Database) DeleteCompletion(ctx context.Context, completionID int) error {
+    _, err := db.Conn.ExecContext(ctx, 
+        "DELETE FROM completions WHERE id = ?", 
+        completionID)
+    return err
 }
